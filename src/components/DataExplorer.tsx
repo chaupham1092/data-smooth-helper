@@ -9,17 +9,47 @@ import { ScrollArea } from './ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Download, Share2, Settings } from 'lucide-react';
+import { Checkbox } from './ui/checkbox';
 
-// Simulated data
-const mockData = Array.from({ length: 365 }, (_, i) => ({
-  date: new Date(2023, 0, i + 1).toISOString(),
-  cases: Math.floor(Math.random() * 200),
-}));
+// Simulated data with regions
+const mockData = Array.from({ length: 365 }, (_, i) => {
+  const date = new Date(2023, 0, i + 1).toISOString();
+  return {
+    date,
+    World: Math.floor(Math.random() * 1000),
+    'North America': Math.floor(Math.random() * 200),
+    Europe: Math.floor(Math.random() * 300),
+    Asia: Math.floor(Math.random() * 400),
+    Africa: Math.floor(Math.random() * 100),
+    Oceania: Math.floor(Math.random() * 50),
+  };
+});
+
+const regions = ['World', 'North America', 'Europe', 'Asia', 'Africa', 'Oceania'];
 
 const DataExplorer: React.FC = () => {
   const [metric, setMetric] = useState('confirmed');
   const [frequency, setFrequency] = useState('7day');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+
+  const filteredData = mockData.map(entry => {
+    const filtered: any = { date: entry.date };
+    selectedRegions.forEach(region => {
+      filtered[region] = entry[region as keyof typeof entry];
+    });
+    return filtered;
+  });
+
+  const handleRegionChange = (region: string) => {
+    setSelectedRegions(prev => {
+      if (prev.includes(region)) {
+        return prev.filter(r => r !== region);
+      } else {
+        return [...prev, region];
+      }
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background p-6 animate-fade-in">
@@ -81,12 +111,21 @@ const DataExplorer: React.FC = () => {
               />
               <ScrollArea className="h-[200px] border rounded-md p-4">
                 <div className="space-y-2">
-                  {['World', 'North America', 'Europe', 'Asia', 'Africa', 'Oceania'].map((region) => (
-                    <div key={region} className="flex items-center space-x-2">
-                      <input type="checkbox" id={region} className="rounded border-gray-300" />
-                      <label htmlFor={region} className="text-sm">{region}</label>
-                    </div>
-                  ))}
+                  {regions
+                    .filter(region => 
+                      region.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((region) => (
+                      <div key={region} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={region} 
+                          checked={selectedRegions.includes(region)}
+                          onCheckedChange={() => handleRegionChange(region)}
+                        />
+                        <Label htmlFor={region} className="text-sm">{region}</Label>
+                      </div>
+                    ))
+                  }
                 </div>
               </ScrollArea>
             </div>
@@ -117,7 +156,7 @@ const DataExplorer: React.FC = () => {
 
           <TabsContent value="chart" className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={mockData}>
+              <LineChart data={filteredData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="date" 
@@ -127,13 +166,16 @@ const DataExplorer: React.FC = () => {
                 <Tooltip 
                   labelFormatter={(label) => new Date(label).toLocaleDateString()}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="cases" 
-                  stroke="#1E40AF" 
-                  dot={false}
-                  strokeWidth={2}
-                />
+                {selectedRegions.map((region, index) => (
+                  <Line 
+                    key={region}
+                    type="monotone" 
+                    dataKey={region} 
+                    stroke={`hsl(${index * 60}, 70%, 50%)`}
+                    dot={false}
+                    strokeWidth={2}
+                  />
+                ))}
               </LineChart>
             </ResponsiveContainer>
           </TabsContent>
