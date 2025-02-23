@@ -7,8 +7,9 @@ import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Download, Share2, Settings } from 'lucide-react';
+import { Download, Share2, Settings, Play } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
+import { Slider } from './ui/slider';
 
 const generateData = () => {
   const startDate = new Date(2022, 4, 1);
@@ -43,6 +44,12 @@ const DataExplorer: React.FC = () => {
     new Date(2022, 4, 1),
     new Date(2025, 1, 16)
   ]);
+
+  const startDate = new Date(2022, 4, 1);
+  const endDate = new Date(2025, 1, 16);
+  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  const [sliderValues, setSliderValues] = useState([0, 100]);
 
   const filteredData = mockData
     .filter(entry => {
@@ -83,6 +90,13 @@ const DataExplorer: React.FC = () => {
   const formatDate = (date: Date) => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  };
+
+  const handleSliderChange = (values: number[]) => {
+    setSliderValues(values);
+    const start = new Date(startDate.getTime() + (values[0] / 100) * totalDays * 24 * 60 * 60 * 1000);
+    const end = new Date(startDate.getTime() + (values[1] / 100) * totalDays * 24 * 60 * 60 * 1000);
+    setTimeRange([start, end]);
   };
 
   return (
@@ -188,35 +202,62 @@ const DataExplorer: React.FC = () => {
             </div>
           </div>
 
-          <TabsContent value="chart" className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart 
-                data={filteredData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis 
-                  dataKey="date" 
-                  tickFormatter={(date) => formatDate(new Date(date))}
-                  minTickGap={50}
-                />
-                <YAxis />
-                <Tooltip 
-                  labelFormatter={(label) => formatDate(new Date(label))}
-                  formatter={(value: number) => [Math.round(value), '']}
-                />
-                {selectedRegions.map((region, index) => (
-                  <Line 
-                    key={region}
-                    type="monotone" 
-                    dataKey={region} 
-                    stroke={`hsl(${index * 60}, 70%, 50%)`}
-                    dot={false}
-                    strokeWidth={2}
+          <TabsContent value="chart" className="space-y-6">
+            <div className="h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart 
+                  data={filteredData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(date) => formatDate(new Date(date))}
+                    minTickGap={50}
                   />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+                  <YAxis />
+                  <Tooltip 
+                    labelFormatter={(label) => formatDate(new Date(label))}
+                    formatter={(value: number) => [Math.round(value), '']}
+                  />
+                  {selectedRegions.map((region, index) => (
+                    <Line 
+                      key={region}
+                      type="monotone" 
+                      dataKey={region} 
+                      stroke={`hsl(${index * 60}, 70%, 50%)`}
+                      dot={false}
+                      strokeWidth={2}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Button variant="outline" size="sm" className="h-7 px-3">
+                  <Play className="h-3 w-3 mr-2" />
+                  Play time-lapse
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                  {formatDate(timeRange[0])}
+                </div>
+                <div className="flex-1 mx-4">
+                  <Slider
+                    value={sliderValues}
+                    onValueChange={handleSliderChange}
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {formatDate(timeRange[1])}
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="table">
