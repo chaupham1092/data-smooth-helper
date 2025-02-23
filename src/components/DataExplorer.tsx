@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from './ui/card';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -11,20 +10,28 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Download, Share2, Settings } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
 
-// Simulated data with regions
-const mockData = Array.from({ length: 365 }, (_, i) => {
-  const date = new Date(2023, 0, i + 1).toISOString();
-  return {
-    date,
-    World: Math.floor(Math.random() * 1000),
-    'North America': Math.floor(Math.random() * 200),
-    Europe: Math.floor(Math.random() * 300),
-    Asia: Math.floor(Math.random() * 400),
-    Africa: Math.floor(Math.random() * 100),
-    Oceania: Math.floor(Math.random() * 50),
-  };
-});
+const generateData = () => {
+  const startDate = new Date(2022, 4, 1);
+  const endDate = new Date(2025, 1, 16);
+  const days = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  return Array.from({ length: days }, (_, i) => {
+    const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+    const peak = i > 150 && i < 200 ? 4 : 1;
+    
+    return {
+      date: date.toISOString(),
+      World: Math.floor(Math.random() * 1000 * peak) * (Math.exp(-i/300)),
+      'North America': Math.floor(Math.random() * 200 * peak) * (Math.exp(-i/300)),
+      Europe: Math.floor(Math.random() * 300 * peak) * (Math.exp(-i/300)),
+      Asia: Math.floor(Math.random() * 400 * peak) * (Math.exp(-i/300)),
+      Africa: Math.floor(Math.random() * 100 * peak) * (Math.exp(-i/300)),
+      Oceania: Math.floor(Math.random() * 50 * peak) * (Math.exp(-i/300)),
+    };
+  });
+};
 
+const mockData = generateData();
 const regions = ['World', 'North America', 'Europe', 'Asia', 'Africa', 'Oceania'];
 
 const DataExplorer: React.FC = () => {
@@ -32,14 +39,36 @@ const DataExplorer: React.FC = () => {
   const [frequency, setFrequency] = useState('7day');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [timeRange, setTimeRange] = useState<[Date, Date]>([
+    new Date(2022, 4, 1),
+    new Date(2025, 1, 16)
+  ]);
 
-  const filteredData = mockData.map(entry => {
-    const filtered: any = { date: entry.date };
-    selectedRegions.forEach(region => {
-      filtered[region] = entry[region as keyof typeof entry];
+  const filteredData = mockData
+    .filter(entry => {
+      const date = new Date(entry.date);
+      return date >= timeRange[0] && date <= timeRange[1];
+    })
+    .map(entry => {
+      const filtered: any = { date: entry.date };
+      selectedRegions.forEach(region => {
+        if (frequency === '7day') {
+          const index = mockData.findIndex(d => d.date === entry.date);
+          if (index >= 0) {
+            let sum = 0;
+            let count = 0;
+            for (let i = Math.max(0, index - 3); i <= Math.min(mockData.length - 1, index + 3); i++) {
+              sum += mockData[i][region as keyof typeof mockData[0]] as number;
+              count++;
+            }
+            filtered[region] = Math.round(sum / count);
+          }
+        } else {
+          filtered[region] = entry[region as keyof typeof entry];
+        }
+      });
+      return filtered;
     });
-    return filtered;
-  });
 
   const handleRegionChange = (region: string) => {
     setSelectedRegions(prev => {
@@ -49,6 +78,11 @@ const DataExplorer: React.FC = () => {
         return [...prev, region];
       }
     });
+  };
+
+  const formatDate = (date: Date) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   };
 
   return (
@@ -156,15 +190,20 @@ const DataExplorer: React.FC = () => {
 
           <TabsContent value="chart" className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={filteredData}>
-                <CartesianGrid strokeDasharray="3 3" />
+              <LineChart 
+                data={filteredData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                 <XAxis 
                   dataKey="date" 
-                  tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                  tickFormatter={(date) => formatDate(new Date(date))}
+                  minTickGap={50}
                 />
                 <YAxis />
                 <Tooltip 
-                  labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                  labelFormatter={(label) => formatDate(new Date(label))}
+                  formatter={(value: number) => [Math.round(value), '']}
                 />
                 {selectedRegions.map((region, index) => (
                   <Line 
