@@ -17,7 +17,7 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import GeoJSON from 'ol/format/GeoJSON';
 import { Fill, Stroke, Style } from 'ol/style';
-import OSM from 'ol/source/OSM';
+import XYZ from 'ol/source/XYZ';
 import 'ol/ol.css';
 
 const generateData = () => {
@@ -120,37 +120,41 @@ const DataExplorer: React.FC = () => {
       target: mapElement.current,
       layers: [
         new TileLayer({
-          source: new OSM({
+          source: new XYZ({
+            url: 'https://cartodb-basemaps-{a-d}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
             attributions: []
           })
         })
       ],
       view: new View({
-        center: [0, 20],
+        center: [0, 0],
         zoom: 2,
+        maxZoom: 8,
+        minZoom: 2,
+        constrainResolution: true,
         projection: 'EPSG:3857'
       }),
       controls: []
     });
 
     const vectorSource = new VectorSource({
-      url: 'https://openlayers.org/data/vector/ecoregions.json',
+      url: 'https://raw.githubusercontent.com/openlayers/openlayers/main/examples/data/geojson/countries.geojson',
       format: new GeoJSON()
     });
 
     const vectorLayer = new VectorLayer({
       source: vectorSource,
       style: (feature) => {
-        const value = feature.get('value') || 0;
-        const color = getColorForValue(value);
+        const countryName = feature.get('name');
+        const value = Math.random() * 1000;
         
         return new Style({
           fill: new Fill({
-            color: color
+            color: getColorForValue(value)
           }),
           stroke: new Stroke({
             color: '#ffffff',
-            width: 1
+            width: 0.5
           })
         });
       }
@@ -159,7 +163,15 @@ const DataExplorer: React.FC = () => {
     map.addLayer(vectorLayer);
     mapRef.current = map;
 
+    const updateSize = () => {
+      map.updateSize();
+    };
+    
+    window.addEventListener('resize', updateSize);
+    updateSize();
+
     return () => {
+      window.removeEventListener('resize', updateSize);
       map.setTarget(undefined);
       mapRef.current = null;
     };
@@ -173,6 +185,7 @@ const DataExplorer: React.FC = () => {
     if (value <= 10) return 'rgba(252, 78, 42, 0.7)';
     if (value <= 20) return 'rgba(227, 26, 28, 0.7)';
     if (value <= 50) return 'rgba(189, 0, 38, 0.7)';
+    if (value <= 100) return 'rgba(128, 0, 38, 0.7)';
     return 'rgba(128, 0, 38, 0.7)';
   };
 
@@ -409,7 +422,7 @@ const DataExplorer: React.FC = () => {
 
           <TabsContent value="map" className="space-y-6">
             <div className="h-[500px] rounded-lg overflow-hidden border relative">
-              <div ref={mapElement} className="w-full h-full" />
+              <div ref={mapElement} className="w-full h-full bg-[#f8f9fa]" />
               <div className="absolute bottom-4 left-4 bg-white/90 p-4 rounded-lg shadow-sm">
                 <div className="text-sm font-medium mb-2">Cases per 100,000 people</div>
                 <div className="flex items-center gap-1 text-xs">
