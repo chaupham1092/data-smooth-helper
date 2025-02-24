@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card } from './ui/card';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
@@ -10,6 +10,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Download, Share2, Settings, Play } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
 import { Slider } from './ui/slider';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 const generateData = () => {
   const startDate = new Date(2022, 4, 1);
@@ -39,17 +41,61 @@ const DataExplorer: React.FC = () => {
   const [metric, setMetric] = useState('confirmed');
   const [frequency, setFrequency] = useState('7day');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>(['World']);
   const [timeRange, setTimeRange] = useState<[Date, Date]>([
     new Date(2022, 4, 1),
     new Date(2025, 1, 16)
   ]);
+  const mapContainer = React.useRef<HTMLDivElement>(null);
+  const map = React.useRef<mapboxgl.Map | null>(null);
 
   const startDate = new Date(2022, 4, 1);
   const endDate = new Date(2025, 1, 16);
   const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
   const [sliderValues, setSliderValues] = useState([0, 100]);
+
+  React.useEffect(() => {
+    if (!mapContainer.current || map.current) return;
+
+    mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZWFpIiwiYSI6ImNscnpyMnl2czAxOW0ya3J4YjV1dXFpNzAifQ.YxPr1bK_5MWVS6TKOGzXfQ';
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/light-v11',
+      center: [0, 20],
+      zoom: 1.5,
+      projection: 'equirectangular'
+    });
+
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    return () => {
+      map.current?.remove();
+    };
+  }, []);
+
+  const handleRegionChange = (region: string) => {
+    setSelectedRegions(prev => {
+      if (prev.includes(region)) {
+        return prev.filter(r => r !== region);
+      } else {
+        return [...prev, region];
+      }
+    });
+  };
+
+  const formatDate = (date: Date) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  };
+
+  const handleSliderChange = (values: number[]) => {
+    setSliderValues(values);
+    const start = new Date(startDate.getTime() + (values[0] / 100) * totalDays * 24 * 60 * 60 * 1000);
+    const end = new Date(startDate.getTime() + (values[1] / 100) * totalDays * 24 * 60 * 60 * 1000);
+    setTimeRange([start, end]);
+  };
 
   const filteredData = mockData
     .filter(entry => {
@@ -76,28 +122,6 @@ const DataExplorer: React.FC = () => {
       });
       return filtered;
     });
-
-  const handleRegionChange = (region: string) => {
-    setSelectedRegions(prev => {
-      if (prev.includes(region)) {
-        return prev.filter(r => r !== region);
-      } else {
-        return [...prev, region];
-      }
-    });
-  };
-
-  const formatDate = (date: Date) => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-  };
-
-  const handleSliderChange = (values: number[]) => {
-    setSliderValues(values);
-    const start = new Date(startDate.getTime() + (values[0] / 100) * totalDays * 24 * 60 * 60 * 1000);
-    const end = new Date(startDate.getTime() + (values[1] / 100) * totalDays * 24 * 60 * 60 * 1000);
-    setTimeRange([start, end]);
-  };
 
   return (
     <div className="min-h-screen bg-background p-6 animate-fade-in">
@@ -260,15 +284,39 @@ const DataExplorer: React.FC = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="table">
-            <div className="text-center py-8 text-muted-foreground">
-              Table view coming soon
+          <TabsContent value="map" className="space-y-6">
+            <div className="h-[500px] rounded-lg overflow-hidden border">
+              <div ref={mapContainer} className="w-full h-full" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Button variant="outline" size="sm" className="h-7 px-3">
+                  <Play className="h-3 w-3 mr-2" />
+                  Play time-lapse
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                  {formatDate(timeRange[0])}
+                </div>
+                <div className="flex-1 mx-4">
+                  <Slider
+                    value={sliderValues}
+                    onValueChange={handleSliderChange}
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {formatDate(timeRange[1])}
+                </div>
+              </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="map">
+          <TabsContent value="table">
             <div className="text-center py-8 text-muted-foreground">
-              Map view coming soon
+              Table view coming soon
             </div>
           </TabsContent>
         </Tabs>
