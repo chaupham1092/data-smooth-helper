@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Card } from './ui/card';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -36,7 +35,57 @@ const generateData = () => {
 };
 
 const mockData = generateData();
-const regions = ['World', 'North America', 'Europe', 'Asia', 'Africa', 'Oceania'];
+
+const countries = [
+  'World',
+  'Andorra',
+  'Angola',
+  'Argentina',
+  'Aruba',
+  'Australia',
+  'Austria',
+  'Azerbaijan',
+  'Bahamas',
+  'Bahrain',
+  'Barbados',
+  'Belgium',
+  'Canada',
+  'China',
+  'Denmark',
+  'Egypt',
+  'Finland',
+  'France',
+  'Germany',
+  'Greece',
+  'Hungary',
+  'Iceland',
+  'India',
+  'Indonesia',
+  'Ireland',
+  'Italy',
+  'Japan',
+  'Kuwait',
+  'Malaysia',
+  'Mexico',
+  'Netherlands',
+  'New Zealand',
+  'Norway',
+  'Poland',
+  'Portugal',
+  'Qatar',
+  'Romania',
+  'Russia',
+  'Singapore',
+  'South Korea',
+  'Spain',
+  'Sweden',
+  'Switzerland',
+  'Thailand',
+  'Turkey',
+  'United Arab Emirates',
+  'United Kingdom',
+  'United States',
+];
 
 const DataExplorer: React.FC = () => {
   const [metric, setMetric] = useState('confirmed');
@@ -55,6 +104,7 @@ const DataExplorer: React.FC = () => {
   const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
   const [sliderValues, setSliderValues] = useState([0, 100]);
+  const [sortBy, setSortBy] = useState<'relevance' | 'alphabetical'>('relevance');
 
   React.useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -96,6 +146,23 @@ const DataExplorer: React.FC = () => {
     const start = new Date(startDate.getTime() + (values[0] / 100) * totalDays * 24 * 60 * 60 * 1000);
     const end = new Date(startDate.getTime() + (values[1] / 100) * totalDays * 24 * 60 * 60 * 1000);
     setTimeRange([start, end]);
+  };
+
+  const filteredAndSortedCountries = countries
+    .filter(country => 
+      country.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy === 'alphabetical') {
+        return a.localeCompare(b);
+      }
+      if (a === 'World') return -1;
+      if (b === 'World') return 1;
+      return a.localeCompare(b);
+    });
+
+  const handleClearSelection = () => {
+    setSelectedRegions(['World']);
   };
 
   const filteredData = mockData
@@ -184,23 +251,28 @@ const DataExplorer: React.FC = () => {
               />
               <ScrollArea className="h-[200px] border rounded-md p-4">
                 <div className="space-y-2">
-                  {regions
-                    .filter(region => 
-                      region.toLowerCase().includes(searchTerm.toLowerCase())
-                    )
-                    .map((region) => (
-                      <div key={region} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={region} 
-                          checked={selectedRegions.includes(region)}
-                          onCheckedChange={() => handleRegionChange(region)}
-                        />
-                        <Label htmlFor={region} className="text-sm">{region}</Label>
-                      </div>
-                    ))
-                  }
+                  {filteredAndSortedCountries.map((country) => (
+                    <div key={country} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={country} 
+                        checked={selectedRegions.includes(country)}
+                        onCheckedChange={() => handleRegionChange(country)}
+                      />
+                      <Label htmlFor={country} className="text-sm">{country}</Label>
+                    </div>
+                  ))}
                 </div>
               </ScrollArea>
+              {selectedRegions.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleClearSelection}
+                  className="w-full"
+                >
+                  Clear selection
+                </Button>
+              )}
             </div>
           </div>
         </div>
