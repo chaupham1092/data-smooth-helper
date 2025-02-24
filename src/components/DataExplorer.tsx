@@ -10,8 +10,15 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Download, Share2, Settings, Play } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
 import { Slider } from './ui/slider';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import Map from 'ol/Map';
+import View from 'ol/View';
+import TileLayer from 'ol/layer/Tile';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import GeoJSON from 'ol/format/GeoJSON';
+import { Fill, Stroke, Style } from 'ol/style';
+import OSM from 'ol/source/OSM';
+import 'ol/ol.css';
 
 const generateData = () => {
   const startDate = new Date(2022, 4, 1);
@@ -96,8 +103,8 @@ const DataExplorer: React.FC = () => {
     new Date(2022, 4, 1),
     new Date(2025, 1, 16)
   ]);
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<Map | null>(null);
+  const mapElement = useRef<HTMLDivElement>(null);
 
   const startDate = new Date(2022, 4, 1);
   const endDate = new Date(2025, 1, 16);
@@ -107,24 +114,67 @@ const DataExplorer: React.FC = () => {
   const [sortBy, setSortBy] = useState<'relevance' | 'alphabetical'>('relevance');
 
   React.useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (!mapElement.current || mapRef.current) return;
 
-    mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZWFpIiwiYSI6ImNscnpyMnl2czAxOW0ya3J4YjV1dXFpNzAifQ.YxPr1bK_5MWVS6TKOGzXfQ';
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
-      center: [0, 20],
-      zoom: 1.5,
-      projection: 'equirectangular'
+    const map = new Map({
+      target: mapElement.current,
+      layers: [
+        new TileLayer({
+          source: new OSM({
+            attributions: []
+          })
+        })
+      ],
+      view: new View({
+        center: [0, 20],
+        zoom: 2,
+        projection: 'EPSG:3857'
+      }),
+      controls: []
     });
 
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    const vectorSource = new VectorSource({
+      url: 'https://openlayers.org/data/vector/ecoregions.json',
+      format: new GeoJSON()
+    });
+
+    const vectorLayer = new VectorLayer({
+      source: vectorSource,
+      style: (feature) => {
+        const value = feature.get('value') || 0;
+        const color = getColorForValue(value);
+        
+        return new Style({
+          fill: new Fill({
+            color: color
+          }),
+          stroke: new Stroke({
+            color: '#ffffff',
+            width: 1
+          })
+        });
+      }
+    });
+
+    map.addLayer(vectorLayer);
+    mapRef.current = map;
 
     return () => {
-      map.current?.remove();
+      map.setTarget(undefined);
+      mapRef.current = null;
     };
   }, []);
+
+  const getColorForValue = (value: number) => {
+    if (value === 0) return 'rgba(240, 240, 240, 0.5)';
+    if (value <= 1) return 'rgba(253, 208, 162, 0.7)';
+    if (value <= 2) return 'rgba(253, 174, 107, 0.7)';
+    if (value <= 5) return 'rgba(253, 141, 60, 0.7)';
+    if (value <= 10) return 'rgba(252, 78, 42, 0.7)';
+    if (value <= 20) return 'rgba(227, 26, 28, 0.7)';
+    if (value <= 50) return 'rgba(189, 0, 38, 0.7)';
+    return 'rgba(128, 0, 38, 0.7)';
+  };
 
   const handleRegionChange = (region: string) => {
     setSelectedRegions(prev => {
@@ -358,8 +408,23 @@ const DataExplorer: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="map" className="space-y-6">
-            <div className="h-[500px] rounded-lg overflow-hidden border">
-              <div ref={mapContainer} className="w-full h-full" />
+            <div className="h-[500px] rounded-lg overflow-hidden border relative">
+              <div ref={mapElement} className="w-full h-full" />
+              <div className="absolute bottom-4 left-4 bg-white/90 p-4 rounded-lg shadow-sm">
+                <div className="text-sm font-medium mb-2">Cases per 100,000 people</div>
+                <div className="flex items-center gap-1 text-xs">
+                  <div className="w-12 text-muted-foreground">No data</div>
+                  {[0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000].map((value, i) => (
+                    <div key={value} className="flex flex-col items-center">
+                      <div 
+                        className="w-6 h-4" 
+                        style={{ backgroundColor: getColorForValue(value) }}
+                      />
+                      <span className="mt-1">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
