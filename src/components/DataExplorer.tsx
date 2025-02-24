@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Card } from './ui/card';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -46,8 +47,8 @@ const DataExplorer: React.FC = () => {
     new Date(2022, 4, 1),
     new Date(2025, 1, 16)
   ]);
-  const mapContainer = React.useRef<HTMLDivElement>(null);
-  const map = React.useRef<mapboxgl.Map | null>(null);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
 
   const startDate = new Date(2022, 4, 1);
   const endDate = new Date(2025, 1, 16);
