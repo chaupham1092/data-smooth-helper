@@ -332,7 +332,7 @@ const DataExplorer: React.FC = () => {
       return date >= timeRange[0] && date <= timeRange[1];
     })
     .map(entry => {
-      const filtered: any = { date: entry.date };
+      const filtered: Record<string, string | number> = { date: entry.date };
       selectedRegions.forEach(region => {
         if (frequency === '7day') {
           const index = mockData.findIndex(d => d.date === entry.date);
@@ -340,13 +340,17 @@ const DataExplorer: React.FC = () => {
             let sum = 0;
             let count = 0;
             for (let i = Math.max(0, index - 3); i <= Math.min(mockData.length - 1, index + 3); i++) {
-              sum += mockData[i][region as keyof typeof mockData[0]] as number;
-              count++;
+              const value = mockData[i][region as keyof typeof mockData[0]];
+              if (typeof value === 'number') {
+                sum += value;
+                count++;
+              }
             }
-            filtered[region] = Math.round(sum / count);
+            filtered[region] = count > 0 ? Math.round(sum / count) : 0;
           }
         } else {
-          filtered[region] = entry[region as keyof typeof entry];
+          const value = entry[region as keyof typeof entry];
+          filtered[region] = typeof value === 'number' ? value : 0;
         }
       });
       return filtered;
