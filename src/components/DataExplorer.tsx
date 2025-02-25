@@ -180,10 +180,14 @@ const DataExplorer: React.FC = () => {
     new Date(2022, 4, 1),
     new Date(2025, 1, 16)
   ]);
+  const [sliderValues, setSliderValues] = useState([0, 100]);
   const mapRef = useRef<Map | null>(null);
   const mapElement = useRef<HTMLDivElement>(null);
 
   const [mockData, setMockData] = useState(generateData('confirmed'));
+  const startDate = new Date(2022, 4, 1);
+  const endDate = new Date(2025, 1, 16);
+  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
   useEffect(() => {
     setMockData(generateData(metric));
@@ -289,9 +293,6 @@ const DataExplorer: React.FC = () => {
       country.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
-      if (sortBy === 'alphabetical') {
-        return a.localeCompare(b);
-      }
       if (a === 'World') return -1;
       if (b === 'World') return 1;
       return a.localeCompare(b);
