@@ -205,6 +205,8 @@ const DataExplorer: React.FC = () => {
     new Date(2025, 1, 16)
   ]);
   const [sliderValues, setSliderValues] = useState([0, 100]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mapRef = useRef<Map | null>(null);
   const mapElement = useRef<HTMLDivElement>(null);
 
@@ -218,87 +220,52 @@ const DataExplorer: React.FC = () => {
   }, [metric]);
 
   useEffect(() => {
-    if (!mapElement.current || mapRef.current) return;
-
-    const map = new Map({
-      target: mapElement.current,
-      layers: [
-        new TileLayer({
-          source: new OSM()
-        })
-      ],
-      view: new View({
-        center: [0, 0],
-        zoom: 2,
-        maxZoom: 8,
-        minZoom: 2,
-        constrainResolution: true,
-        projection: 'EPSG:3857'
-      }),
-      controls: []
-    });
-
-    const vectorSource = new VectorSource({
-      url: 'https://openlayers.org/en/latest/examples/data/geojson/countries.geojson',
-      format: new GeoJSON()
-    });
-
-    const vectorLayer = new VectorLayer({
-      source: vectorSource,
-      style: (feature) => {
-        const countryName = feature.get('name');
-        const value = Math.random() * 1000;
-        
-        return new Style({
-          fill: new Fill({
-            color: getColorForValue(value)
-          }),
-          stroke: new Stroke({
-            color: '#ffffff',
-            width: 0.5
-          })
-        });
-      }
-    });
-
-    map.addLayer(vectorLayer);
-    mapRef.current = map;
-
-    const updateSize = () => {
-      map.updateSize();
-    };
-    
-    window.addEventListener('resize', updateSize);
-    updateSize();
-
     return () => {
-      window.removeEventListener('resize', updateSize);
-      map.setTarget(undefined);
-      mapRef.current = null;
+      if (playIntervalRef.current) {
+        clearInterval(playIntervalRef.current);
+      }
     };
   }, []);
-
-  const getColorForValue = (value: number) => {
-    if (value === 0) return 'rgba(240, 240, 240, 0.5)';
-    if (value <= 1) return 'rgba(253, 208, 162, 0.7)';
-    if (value <= 2) return 'rgba(253, 174, 107, 0.7)';
-    if (value <= 5) return 'rgba(253, 141, 60, 0.7)';
-    if (value <= 10) return 'rgba(252, 78, 42, 0.7)';
-    if (value <= 20) return 'rgba(227, 26, 28, 0.7)';
-    if (value <= 50) return 'rgba(189, 0, 38, 0.7)';
-    if (value <= 100) return 'rgba(128, 0, 38, 0.7)';
-    return 'rgba(128, 0, 38, 0.7)';
-  };
 
   const handleRegionChange = (region: string) => {
     setSelectedRegions(prev => {
       if (prev.includes(region)) {
         const newSelection = prev.filter(r => r !== region);
-        return newSelection.length > 0 ? newSelection : ['World'];
+        return newSelection;
       } else {
         return [...prev, region];
       }
     });
+  };
+
+  const handlePlayTimelapse = () => {
+    if (isPlaying) {
+      if (playIntervalRef.current) {
+        clearInterval(playIntervalRef.current);
+        playIntervalRef.current = null;
+      }
+      setIsPlaying(false);
+      return;
+    }
+
+    setIsPlaying(true);
+    let currentValue = sliderValues[0];
+
+    playIntervalRef.current = setInterval(() => {
+      currentValue += 1;
+      
+      if (currentValue > 100) {
+        if (playIntervalRef.current) {
+          clearInterval(playIntervalRef.current);
+          playIntervalRef.current = null;
+        }
+        setIsPlaying(false);
+        return;
+      }
+
+      setSliderValues([currentValue, Math.max(currentValue, sliderValues[1])]);
+      handleSliderChange([currentValue, Math.max(currentValue, sliderValues[1])]);
+    }, 100); // Update every 100ms
   };
 
   const formatDate = (date: Date) => {
@@ -503,9 +470,18 @@ const DataExplorer: React.FC = () => {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Button variant="outline" size="sm" className="h-7 px-3">
-                  <Play className="h-3 w-3 mr-2" />
-                  Play time-lapse
+                <Button variant="outline" size="sm" className="h-7 px-3" onClick={handlePlayTimelapse}>
+                  {isPlaying ? (
+                    <>
+                      <div className="w-3 h-3 mr-2 bg-primary rounded-sm" />
+                      Stop
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-3 w-3 mr-2" />
+                      Play time-lapse
+                    </>
+                  )}
                 </Button>
                 <div className="text-sm text-muted-foreground">
                   {formatDate(timeRange[0])}
@@ -518,6 +494,7 @@ const DataExplorer: React.FC = () => {
                     max={100}
                     step={1}
                     className="w-full"
+                    disabled={isPlaying}
                   />
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -548,9 +525,18 @@ const DataExplorer: React.FC = () => {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Button variant="outline" size="sm" className="h-7 px-3">
-                  <Play className="h-3 w-3 mr-2" />
-                  Play time-lapse
+                <Button variant="outline" size="sm" className="h-7 px-3" onClick={handlePlayTimelapse}>
+                  {isPlaying ? (
+                    <>
+                      <div className="w-3 h-3 mr-2 bg-primary rounded-sm" />
+                      Stop
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-3 w-3 mr-2" />
+                      Play time-lapse
+                    </>
+                  )}
                 </Button>
                 <div className="text-sm text-muted-foreground">
                   {formatDate(timeRange[0])}
@@ -563,6 +549,7 @@ const DataExplorer: React.FC = () => {
                     max={100}
                     step={1}
                     className="w-full"
+                    disabled={isPlaying}
                   />
                 </div>
                 <div className="text-sm text-muted-foreground">
