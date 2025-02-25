@@ -17,81 +17,158 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import GeoJSON from 'ol/format/GeoJSON';
 import { Fill, Stroke, Style } from 'ol/style';
-import XYZ from 'ol/source/XYZ';
+import OSM from 'ol/source/OSM';
 import 'ol/ol.css';
 
-const generateData = () => {
+const generateData = (metric: string) => {
   const startDate = new Date(2022, 4, 1);
   const endDate = new Date(2025, 1, 16);
   const days = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  const multiplier = metric === 'deaths' ? 0.1 : metric === 'suspected' ? 1.5 : 1;
   
   return Array.from({ length: days }, (_, i) => {
     const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
     const peak = i > 150 && i < 200 ? 4 : 1;
     
+    const generateCountryData = (baseValue: number) => 
+      Math.floor(Math.random() * baseValue * peak * multiplier) * (Math.exp(-i/300));
+
     return {
       date: date.toISOString(),
-      World: Math.floor(Math.random() * 1000 * peak) * (Math.exp(-i/300)),
-      'North America': Math.floor(Math.random() * 200 * peak) * (Math.exp(-i/300)),
-      Europe: Math.floor(Math.random() * 300 * peak) * (Math.exp(-i/300)),
-      Asia: Math.floor(Math.random() * 400 * peak) * (Math.exp(-i/300)),
-      Africa: Math.floor(Math.random() * 100 * peak) * (Math.exp(-i/300)),
-      Oceania: Math.floor(Math.random() * 50 * peak) * (Math.exp(-i/300)),
+      World: generateCountryData(1000),
+      Vietnam: generateCountryData(200),
+      Cambodia: generateCountryData(150),
+      Laos: generateCountryData(100),
+      Thailand: generateCountryData(400),
+      Malaysia: generateCountryData(300),
+      Singapore: generateCountryData(200),
+      Indonesia: generateCountryData(500),
+      Philippines: generateCountryData(400),
+      Myanmar: generateCountryData(300),
+      'United States': generateCountryData(800),
+      'United Kingdom': generateCountryData(600),
+      France: generateCountryData(500),
+      Germany: generateCountryData(500),
+      Italy: generateCountryData(400),
+      Spain: generateCountryData(400),
+      China: generateCountryData(900),
+      Japan: generateCountryData(500),
+      'South Korea': generateCountryData(400),
+      India: generateCountryData(800),
     };
   });
 };
 
-const mockData = generateData();
-
 const countries = [
   'World',
+  'Afghanistan',
+  'Albania',
+  'Algeria',
   'Andorra',
   'Angola',
   'Argentina',
-  'Aruba',
   'Australia',
   'Austria',
   'Azerbaijan',
   'Bahamas',
   'Bahrain',
+  'Bangladesh',
   'Barbados',
   'Belgium',
+  'Bhutan',
+  'Bolivia',
+  'Brazil',
+  'Cambodia',
+  'Cameroon',
   'Canada',
+  'Chile',
   'China',
+  'Colombia',
+  'Costa Rica',
+  'Croatia',
+  'Cuba',
+  'Cyprus',
+  'Czech Republic',
   'Denmark',
+  'Ecuador',
   'Egypt',
+  'Estonia',
+  'Ethiopia',
   'Finland',
   'France',
   'Germany',
+  'Ghana',
   'Greece',
   'Hungary',
   'Iceland',
   'India',
   'Indonesia',
+  'Iran',
+  'Iraq',
   'Ireland',
+  'Israel',
   'Italy',
   'Japan',
+  'Jordan',
+  'Kazakhstan',
+  'Kenya',
   'Kuwait',
+  'Laos',
+  'Latvia',
+  'Lebanon',
+  'Libya',
+  'Lithuania',
+  'Luxembourg',
   'Malaysia',
+  'Maldives',
+  'Malta',
   'Mexico',
+  'Mongolia',
+  'Morocco',
+  'Myanmar',
+  'Nepal',
   'Netherlands',
   'New Zealand',
+  'Nigeria',
   'Norway',
+  'Oman',
+  'Pakistan',
+  'Panama',
+  'Paraguay',
+  'Peru',
+  'Philippines',
   'Poland',
   'Portugal',
   'Qatar',
   'Romania',
   'Russia',
+  'Saudi Arabia',
+  'Serbia',
   'Singapore',
+  'Slovakia',
+  'Slovenia',
+  'South Africa',
   'South Korea',
   'Spain',
+  'Sri Lanka',
   'Sweden',
   'Switzerland',
+  'Syria',
+  'Taiwan',
   'Thailand',
   'Turkey',
-  'United Arab Emirates',
+  'UAE',
+  'Uganda',
+  'Ukraine',
   'United Kingdom',
   'United States',
+  'Uruguay',
+  'Uzbekistan',
+  'Venezuela',
+  'Vietnam',
+  'Yemen',
+  'Zimbabwe'
 ];
 
 const DataExplorer: React.FC = () => {
@@ -106,24 +183,20 @@ const DataExplorer: React.FC = () => {
   const mapRef = useRef<Map | null>(null);
   const mapElement = useRef<HTMLDivElement>(null);
 
-  const startDate = new Date(2022, 4, 1);
-  const endDate = new Date(2025, 1, 16);
-  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const [mockData, setMockData] = useState(generateData('confirmed'));
 
-  const [sliderValues, setSliderValues] = useState([0, 100]);
-  const [sortBy, setSortBy] = useState<'relevance' | 'alphabetical'>('relevance');
+  useEffect(() => {
+    setMockData(generateData(metric));
+  }, [metric]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!mapElement.current || mapRef.current) return;
 
     const map = new Map({
       target: mapElement.current,
       layers: [
         new TileLayer({
-          source: new XYZ({
-            url: 'https://cartodb-basemaps-{a-d}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
-            attributions: []
-          })
+          source: new OSM()
         })
       ],
       view: new View({
@@ -138,7 +211,7 @@ const DataExplorer: React.FC = () => {
     });
 
     const vectorSource = new VectorSource({
-      url: 'https://raw.githubusercontent.com/openlayers/openlayers/main/examples/data/geojson/countries.geojson',
+      url: 'https://openlayers.org/en/latest/examples/data/geojson/countries.geojson',
       format: new GeoJSON()
     });
 
@@ -268,7 +341,7 @@ const DataExplorer: React.FC = () => {
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium mb-2">METRIC</h3>
-              <RadioGroup defaultValue="confirmed" onValueChange={setMetric} className="flex flex-col space-y-2">
+              <RadioGroup value={metric} onValueChange={setMetric} className="flex flex-col space-y-2">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="confirmed" id="confirmed" />
                   <Label htmlFor="confirmed">Confirmed cases</Label>
@@ -286,7 +359,7 @@ const DataExplorer: React.FC = () => {
 
             <div>
               <h3 className="text-sm font-medium mb-2">FREQUENCY</h3>
-              <RadioGroup defaultValue="7day" onValueChange={setFrequency} className="flex flex-col space-y-2">
+              <RadioGroup value={frequency} onValueChange={setFrequency} className="flex flex-col space-y-2">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="7day" id="7day" />
                   <Label htmlFor="7day">7-day average</Label>
@@ -314,16 +387,20 @@ const DataExplorer: React.FC = () => {
               />
               <ScrollArea className="h-[200px] border rounded-md p-4">
                 <div className="space-y-2">
-                  {filteredAndSortedCountries.map((country) => (
-                    <div key={country} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={country} 
-                        checked={selectedRegions.includes(country)}
-                        onCheckedChange={() => handleRegionChange(country)}
-                      />
-                      <Label htmlFor={country} className="text-sm">{country}</Label>
-                    </div>
-                  ))}
+                  {countries
+                    .filter(country => 
+                      country.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((country) => (
+                      <div key={country} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={country} 
+                          checked={selectedRegions.includes(country)}
+                          onCheckedChange={() => handleRegionChange(country)}
+                        />
+                        <Label htmlFor={country} className="text-sm">{country}</Label>
+                      </div>
+                    ))}
                 </div>
               </ScrollArea>
               {selectedRegions.length > 0 && (
