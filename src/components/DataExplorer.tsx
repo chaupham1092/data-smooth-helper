@@ -293,7 +293,8 @@ const DataExplorer: React.FC = () => {
   const handleRegionChange = (region: string) => {
     setSelectedRegions(prev => {
       if (prev.includes(region)) {
-        return prev.filter(r => r !== region);
+        const newSelection = prev.filter(r => r !== region);
+        return newSelection.length > 0 ? newSelection : ['World'];
       } else {
         return [...prev, region];
       }
