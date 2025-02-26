@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Card } from './ui/card';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -215,16 +216,17 @@ const DataExplorer: React.FC = () => {
   const [frequency, setFrequency] = useState('7day');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegions, setSelectedRegions] = useState<string[]>(['World']);
-  const [timeRange, setTimeRange] = useState<[Date, Date]>([
-    new Date(2022, 4, 1),
-    new Date(2025, 1, 16)
-  ]);
+  const startDate = new Date(2022, 4, 1);
+  const endDate = new Date(2025, 1, 16);
+  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const [timeRange, setTimeRange] = useState<[Date, Date]>([startDate, endDate]);
   const [sliderValues, setSliderValues] = useState([0, 100]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [mockData, setMockData] = useState(generateData(metric));
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mapRef = useRef<Map | null>(null);
   const mapElement = useRef<HTMLDivElement>(null);
-  const [axisScale, setAxisScale] = useState<'linear' | 'log'>('linear');
+  const [axisScale, setAxisScale] = useState<'number' | 'category'>('number');
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
@@ -497,7 +499,7 @@ const DataExplorer: React.FC = () => {
                     tickFormatter={(date) => formatDate(new Date(date))}
                     minTickGap={50}
                   />
-                  <YAxis scale={axisScale} type={axisScale === 'log' ? 'log' : 'number'}/>
+                  <YAxis type={axisScale === 'number' ? 'number' : 'category'} />
                   <Tooltip 
                     labelFormatter={(label) => formatDate(new Date(label))}
                     formatter={(value: number) => [Math.round(value), '']}
