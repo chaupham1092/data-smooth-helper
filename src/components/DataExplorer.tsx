@@ -7,7 +7,7 @@ import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Download, Share2, Settings, Play } from 'lucide-react';
+import { Settings, Play } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
 import { Slider } from './ui/slider';
 import Map from 'ol/Map';
@@ -224,12 +224,8 @@ const DataExplorer: React.FC = () => {
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mapRef = useRef<Map | null>(null);
   const mapElement = useRef<HTMLDivElement>(null);
-  const [axisScale, setAxisScale] = useState<ScaleType>('linear');
-
-  const [mockData, setMockData] = useState(generateData('confirmed'));
-  const startDate = new Date(2022, 4, 1);
-  const endDate = new Date(2025, 1, 16);
-  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const [axisScale, setAxisScale] = useState<'linear' | 'log'>('linear');
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     setMockData(generateData(metric));
@@ -351,42 +347,40 @@ const DataExplorer: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium mb-2">METRIC</h3>
-              <RadioGroup value={metric} onValueChange={setMetric} className="flex flex-col space-y-2">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="confirmed" id="confirmed" />
-                  <Label htmlFor="confirmed">Confirmed cases</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="suspected" id="suspected" />
-                  <Label htmlFor="suspected">Confirmed and suspected cases</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="deaths" id="deaths" />
-                  <Label htmlFor="deaths">Confirmed deaths</Label>
-                </div>
-              </RadioGroup>
-            </div>
+          <div>
+            <h3 className="text-sm font-medium mb-2">METRIC</h3>
+            <RadioGroup value={metric} onValueChange={setMetric} className="flex flex-col space-y-2">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="confirmed" id="confirmed" />
+                <Label htmlFor="confirmed">Confirmed cases</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="suspected" id="suspected" />
+                <Label htmlFor="suspected">Confirmed and suspected cases</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="deaths" id="deaths" />
+                <Label htmlFor="deaths">Confirmed deaths</Label>
+              </div>
+            </RadioGroup>
+          </div>
 
-            <div>
-              <h3 className="text-sm font-medium mb-2">FREQUENCY</h3>
-              <RadioGroup value={frequency} onValueChange={setFrequency} className="flex flex-col space-y-2">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="7day" id="7day" />
-                  <Label htmlFor="7day">7-day average</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="cumulative" id="cumulative" />
-                  <Label htmlFor="cumulative">Cumulative</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="daily" id="daily" />
-                  <Label htmlFor="daily">Daily</Label>
-                </div>
-              </RadioGroup>
-            </div>
+          <div>
+            <h3 className="text-sm font-medium mb-2">FREQUENCY</h3>
+            <RadioGroup value={frequency} onValueChange={setFrequency} className="flex flex-col space-y-2">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="7day" id="7day" />
+                <Label htmlFor="7day">7-day average</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="cumulative" id="cumulative" />
+                <Label htmlFor="cumulative">Cumulative</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="daily" id="daily" />
+                <Label htmlFor="daily">Daily</Label>
+              </div>
+            </RadioGroup>
           </div>
 
           <div>
@@ -433,24 +427,62 @@ const DataExplorer: React.FC = () => {
         <Tabs defaultValue="chart" className="w-full">
           <div className="flex justify-between items-center mb-4">
             <TabsList>
-              <TabsTrigger value="table">Table</TabsTrigger>
               <TabsTrigger value="map">Map</TabsTrigger>
               <TabsTrigger value="chart">Chart</TabsTrigger>
             </TabsList>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-              <Button variant="outline" size="sm">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setSettingsOpen(!settingsOpen)}
+              >
                 <Settings className="h-4 w-4" />
               </Button>
             </div>
           </div>
+
+          {settingsOpen && (
+            <Card className="p-4 mb-4">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-lg font-semibold">LINE CHART SETTINGS</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSettingsOpen(false)}
+                  className="h-6 w-6 p-0"
+                >
+                  ×
+                </Button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium mb-2">Axis scale</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant={axisScale === 'linear' ? 'secondary' : 'outline'}
+                      onClick={() => setAxisScale('linear')}
+                      className="w-full justify-center"
+                    >
+                      Linear
+                    </Button>
+                    <Button 
+                      variant={axisScale === 'log' ? 'secondary' : 'outline'}
+                      onClick={() => setAxisScale('log')}
+                      className="w-full justify-center"
+                    >
+                      Logarithmic
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {axisScale === 'linear' 
+                      ? "A linear scale evenly spaces values, where each increment represents a consistent change. A logarithmic scale uses multiples of the starting value, with each increment representing the same percentage increase."
+                      : "A logarithmic scale uses values that increase exponentially, where each increment represents a fixed percentage increase rather than a fixed amount. The scale is based on multiples of a starting value, and the distance between values grows as the numbers get larger."
+                    }
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
 
           <TabsContent value="chart" className="space-y-6">
             <div className="h-[400px]">
@@ -465,7 +497,7 @@ const DataExplorer: React.FC = () => {
                     tickFormatter={(date) => formatDate(new Date(date))}
                     minTickGap={50}
                   />
-                  <YAxis scale={axisScale === 'logarithmic' ? 'log' : 'linear'} />
+                  <YAxis scale={axisScale} type={axisScale === 'log' ? 'log' : 'number'}/>
                   <Tooltip 
                     labelFormatter={(label) => formatDate(new Date(label))}
                     formatter={(value: number) => [Math.round(value), '']}
@@ -574,17 +606,10 @@ const DataExplorer: React.FC = () => {
               </div>
             </div>
           </TabsContent>
-
-          <TabsContent value="table">
-            <div className="text-center py-8 text-muted-foreground">
-              Table view coming soon
-            </div>
-          </TabsContent>
         </Tabs>
 
         <div className="text-sm text-muted-foreground border-t pt-4">
           <p>Data source: World Health Organization</p>
-          <p className="mt-1">CC BY</p>
         </div>
       </Card>
     </div>
