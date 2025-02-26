@@ -220,6 +220,8 @@ const DataExplorer: React.FC = () => {
   ]);
   const [sliderValues, setSliderValues] = useState([0, 100]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [timeStep, setTimeStep] = useState<'day' | 'month'>('day');
+  const [axisScale, setAxisScale] = useState<'linear' | 'logarithmic'>('linear');
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mapRef = useRef<Map | null>(null);
   const mapElement = useRef<HTMLDivElement>(null);
@@ -264,9 +266,10 @@ const DataExplorer: React.FC = () => {
 
     setIsPlaying(true);
     let currentValue = sliderValues[0];
+    const stepSize = timeStep === 'month' ? 30 : 1; // Approximate month as 30 days
 
     playIntervalRef.current = setInterval(() => {
-      currentValue += 1;
+      currentValue += stepSize;
       
       if (currentValue > 100) {
         if (playIntervalRef.current) {
@@ -279,7 +282,7 @@ const DataExplorer: React.FC = () => {
 
       setSliderValues([sliderValues[0], currentValue]);
       handleSliderChange([sliderValues[0], currentValue]);
-    }, 100); // Update every 100ms
+    }, timeStep === 'month' ? 300 : 100); // Slower for months
   };
 
   const formatDate = (date: Date) => {
@@ -337,6 +340,8 @@ const DataExplorer: React.FC = () => {
       });
       return filtered;
     });
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background p-6 animate-fade-in">
@@ -431,24 +436,51 @@ const DataExplorer: React.FC = () => {
         <Tabs defaultValue="chart" className="w-full">
           <div className="flex justify-between items-center mb-4">
             <TabsList>
-              <TabsTrigger value="table">Table</TabsTrigger>
               <TabsTrigger value="map">Map</TabsTrigger>
               <TabsTrigger value="chart">Chart</TabsTrigger>
             </TabsList>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-              <Button variant="outline" size="sm">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setSettingsOpen(!settingsOpen)}
+              >
                 <Settings className="h-4 w-4" />
               </Button>
             </div>
           </div>
+
+          {settingsOpen && (
+            <Card className="p-4 mb-4">
+              <h2 className="text-lg font-semibold mb-4">LINE CHART SETTINGS</h2>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium mb-2">Axis scale</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant={axisScale === 'linear' ? 'secondary' : 'outline'}
+                      onClick={() => setAxisScale('linear')}
+                      className="w-full justify-center"
+                    >
+                      Linear
+                    </Button>
+                    <Button 
+                      variant={axisScale === 'logarithmic' ? 'secondary' : 'outline'}
+                      onClick={() => setAxisScale('logarithmic')}
+                      className="w-full justify-center"
+                    >
+                      Logarithmic
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    A linear scale evenly spaces values, where each increment represents a consistent change. 
+                    A logarithmic scale uses multiples of the starting value, with each increment representing 
+                    the same percentage increase.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
 
           <TabsContent value="chart" className="space-y-6">
             <div className="h-[400px]">
@@ -463,7 +495,7 @@ const DataExplorer: React.FC = () => {
                     tickFormatter={(date) => formatDate(new Date(date))}
                     minTickGap={50}
                   />
-                  <YAxis />
+                  <YAxis scale={axisScale} />
                   <Tooltip 
                     labelFormatter={(label) => formatDate(new Date(label))}
                     formatter={(value: number) => [Math.round(value), '']}
@@ -484,19 +516,34 @@ const DataExplorer: React.FC = () => {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Button variant="outline" size="sm" className="h-7 px-3" onClick={handlePlayTimelapse}>
-                  {isPlaying ? (
-                    <>
-                      <div className="w-3 h-3 mr-2 bg-primary rounded-sm" />
-                      Stop
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-3 w-3 mr-2" />
-                      Play time-lapse
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-7 px-3"
+                    onClick={handlePlayTimelapse}
+                  >
+                    {isPlaying ? (
+                      <>
+                        <div className="w-3 h-3 mr-2 bg-primary rounded-sm" />
+                        Stop
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-3 w-3 mr-2" />
+                        Play time-lapse
+                      </>
+                    )}
+                  </Button>
+                  <select 
+                    className="h-7 px-2 border rounded-md text-sm"
+                    value={timeStep}
+                    onChange={(e) => setTimeStep(e.target.value as 'day' | 'month')}
+                  >
+                    <option value="day">By day</option>
+                    <option value="month">By month</option>
+                  </select>
+                </div>
                 <div className="text-sm text-muted-foreground">
                   {formatDate(timeRange[0])}
                 </div>
@@ -582,7 +629,6 @@ const DataExplorer: React.FC = () => {
 
         <div className="text-sm text-muted-foreground border-t pt-4">
           <p>Data source: World Health Organization</p>
-          <p className="mt-1">CC BY</p>
         </div>
       </Card>
     </div>
