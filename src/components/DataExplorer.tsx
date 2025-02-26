@@ -20,6 +20,20 @@ import { Fill, Stroke, Style } from 'ol/style';
 import OSM from 'ol/source/OSM';
 import 'ol/ol.css';
 
+const getColorForValue = (value: number): string => {
+  if (value === 0) return '#f8f9fa';  // No data color
+  if (value < 1) return '#fee5d9';
+  if (value < 2) return '#fcbba1';
+  if (value < 5) return '#fc9272';
+  if (value < 10) return '#fb6a4a';
+  if (value < 20) return '#ef3b2c';
+  if (value < 50) return '#cb181d';
+  if (value < 100) return '#a50f15';
+  if (value < 200) return '#67000d';
+  if (value < 500) return '#4a0000';
+  return '#270000';  // 1000+
+};
+
 const generateData = (metric: string) => {
   const startDate = new Date(2022, 4, 1);
   const endDate = new Date(2025, 1, 16);
