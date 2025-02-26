@@ -277,8 +277,8 @@ const DataExplorer: React.FC = () => {
         return;
       }
 
-      setSliderValues([currentValue, Math.max(currentValue, sliderValues[1])]);
-      handleSliderChange([currentValue, Math.max(currentValue, sliderValues[1])]);
+      setSliderValues([sliderValues[0], currentValue]);
+      handleSliderChange([sliderValues[0], currentValue]);
     }, 100); // Update every 100ms
   };
 
