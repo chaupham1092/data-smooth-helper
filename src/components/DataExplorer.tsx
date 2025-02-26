@@ -19,6 +19,7 @@ import GeoJSON from 'ol/format/GeoJSON';
 import { Fill, Stroke, Style } from 'ol/style';
 import OSM from 'ol/source/OSM';
 import 'ol/ol.css';
+import { ScaleType } from 'recharts/types/util/types';
 
 const getColorForValue = (value: number): string => {
   if (value === 0) return '#f8f9fa';  // No data color
@@ -223,6 +224,7 @@ const DataExplorer: React.FC = () => {
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mapRef = useRef<Map | null>(null);
   const mapElement = useRef<HTMLDivElement>(null);
+  const [axisScale, setAxisScale] = useState<ScaleType>('linear');
 
   const [mockData, setMockData] = useState(generateData('confirmed'));
   const startDate = new Date(2022, 4, 1);
@@ -463,7 +465,7 @@ const DataExplorer: React.FC = () => {
                     tickFormatter={(date) => formatDate(new Date(date))}
                     minTickGap={50}
                   />
-                  <YAxis />
+                  <YAxis scale={axisScale === 'logarithmic' ? 'log' : 'linear'} />
                   <Tooltip 
                     labelFormatter={(label) => formatDate(new Date(label))}
                     formatter={(value: number) => [Math.round(value), '']}
